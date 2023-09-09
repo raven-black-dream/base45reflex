@@ -1,0 +1,81 @@
+/* Base styles */
+body {
+  background-color: #1c1c1c; /* Charcoal gray background */
+  color: #aaaaaa; /* Light gray text */
+  font-family: "Times New Roman", serif;
+}
+
+/* Header and Navigation */
+header {
+  background-color: #333333; /* Dark gray header background */
+  color: #aaaaaa;
+  padding: 10px;
+}
+
+nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+nav a {
+  color: #6aa84f; /* Dark green navigation links */
+  margin: 0 15px;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+/* Accent Color (Slytherin Green) */
+.button {
+  background-color: #1a472a; /* Dark Slytherin green button color */
+  color: #ffffff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.button:hover {
+  background-color: #0f2d16; /* Darker green on hover */
+}
+
+/* Charts and Graphs */
+.chart {
+  color: #2a804f; /* Muted Slytherin green for chart data */
+}
+
+/* Feedback and Notifications */
+.notification {
+  background-color: rgba(28, 28, 28, 0.9); /* Dark gray translucent background */
+  color: #aaaaaa;
+  padding: 10px;
+  border-radius: 5px;
+  margin-top: 10px;
+}
+
+/* Modal Dialogs and Pop-ups */
+.modal-overlay {
+  background-color: rgba(0, 0, 0, 0.6); /* Dark overlay */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-content {
+  background-color: #262626; /* Dark modal background */
+  color: #aaaaaa;
+  padding: 20px;
+  border-radius: 5px;
+}
+
+/* Interactive Elements */
+a:hover {
+  color: #1a472a; /* Dark Slytherin green link color on hover */
+}
+
+/* Adjust other styling elements as needed */

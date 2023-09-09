@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "base45reflex"
+version = "0.1.0"
+description = ""
+authors = ["Evan Harley <evan.harley21@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+reflex = "^0.2.7"
+pandas = "^2.1.0"
+plotly = "^5.16.1"
+pyrebase4 = "^4.7.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

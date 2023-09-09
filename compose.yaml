@@ -1,0 +1,20 @@
+# During build and run, set environment DOMAIN pointing
+# to publicly accessible domain where app will be hosted
+services:
+  app:
+    image: local/reflex-app
+    build:
+      context: .
+      args:
+        API_URL: https://${DOMAIN:-localhost}
+
+  webserver:
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - 443:443
+    build:
+      context: .
+      dockerfile: Caddy.Dockerfile
+    depends_on:
+      - app
