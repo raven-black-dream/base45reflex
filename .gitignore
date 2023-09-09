@@ -1,4 +1,5 @@
 *.db
 *.py[cod]
 .web
+base45reflex/firebaseConfig.json
 __pycache__/
