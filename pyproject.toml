@@ -11,6 +11,7 @@ reflex = "^0.2.7"
 pandas = "^2.1.0"
 plotly = "^5.16.1"
 pyrebase4 = "^4.7.1"
+numpy = "^1.25.2"
 
 
 [build-system]
