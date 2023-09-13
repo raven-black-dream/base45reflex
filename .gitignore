@@ -1,5 +1,7 @@
 *.db
 *.py[cod]
 .web
+.idea
 base45reflex/firebaseConfig.json
 __pycache__/
+/.vscode/
