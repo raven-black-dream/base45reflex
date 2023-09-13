@@ -17,14 +17,13 @@ class Calendar(rx.Component):
     month: rx.Var[int] = date.today().month
     year: rx.Var[int] = date.today().year
 
-
     @classmethod
     def get_controlled_triggers(cls) -> dict[str, rx.Var]:
         return {
-        "on_day_click": rx.EVENT_ARG,
-        "on_event_click": rx.EVENT_ARG,
-        "on_event_mouse_over": rx.EVENT_ARG,
-        "on_event_mouse_out": rx.EVENT_ARG}
+            "on_day_click": rx.EVENT_ARG,
+            "on_event_click": rx.EVENT_ARG,
+            "on_event_mouse_over": rx.EVENT_ARG,
+            "on_event_mouse_out": rx.EVENT_ARG}
 
 
 calendar = Calendar.create
@@ -32,7 +31,7 @@ calendar = Calendar.create
 
 def index() -> rx.Component:
     comp_list = [rx.heading(f"Welcome to Base 45 Training!", font_size="2em"),
-                ]
+                 ]
     return PageView(comp_list).build()
 
 
@@ -169,11 +168,10 @@ class LandingState(State):
                         title={'text': "Reps Per Set Variance"}
                     )
                 )
+                fig.update_layout(title={'text': exercise})
                 indicators[day_name][exercise] = fig
 
         return indicators
-
-
 
     @rx.var
     def day_names(self) -> List[str]:
@@ -199,9 +197,9 @@ def landing() -> rx.Component:
                          LandingState.day_names,
                          lambda x: build_metric_block(x)
                      )),
-                     width='75%', is_lazy=True, variant='solid-rounded', 
+                     width='75%', is_lazy=True, variant='solid-rounded',
                  ),
-                 width='100%'),
+                     width='100%'),
                  rx.divider(),
                  rx.center(
 
@@ -220,10 +218,13 @@ def build_metric_block(day_name: str):
     return rx.tab_panel(
         rx.foreach(
             figs,
-            lambda x: rx.plotly(data=x[1], layout=dict(grid={'rows': 2, 'columns': 3, 'pattern': "independent"},
-                                                       paper_bgcolor='#262626'))
+            lambda x: rx.vstack(
+                rx.text(x[0], font_size='1.5em', color='#aaaaaa'),
+                rx.plotly(data=x[1], layout=dict(grid={'rows': 2, 'columns': 3, 'pattern': "independent"},
+                                                 paper_bgcolor='#262626', font={'color': '#aaaaaa'},
+                                                 )
+                          ))
         ),
 
         width='100%'
     )
-
