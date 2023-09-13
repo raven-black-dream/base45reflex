@@ -2,6 +2,7 @@ from datetime import date
 import reflex as rx
 import pandas as pd
 from ..page_view import PageView
+import plotly.graph_objects as go
 from base45reflex.SQLModels import UserProgramHistory, ProgramDay, Workout, WorkoutSet, UserWorkoutMetrics, Exercise
 from ..state import State
 import sqlmodel as sqlm
@@ -55,7 +56,7 @@ class LandingState(State):
             return current_program.start_date.isoformat()
 
     @rx.var
-    def metrics(self) -> Dict[str, Dict[str, Dict[str, str]]]:
+    def metrics(self) -> Dict[str, Dict[str, Dict[str, float]]]:
         data = []
         with rx.session() as session:
             workout_stmt = Workout.select.where(sqlm.and_(
@@ -75,7 +76,7 @@ class LandingState(State):
                                      'unit': 'lbs' if metric.unit_id == 1 else None, 'date': metric.date})
         df = pd.DataFrame.from_records(data)
         df.sort_values('date', ascending=True, inplace=True)
-        df['diff'] = df.groupby(['day_name', 'exercise', 'metric'])['value'].diff().fillna(0)
+        df['prev'] = df.groupby(['day_name', 'exercise', 'metric'])['value'].shift(1).fillna(0)
         metrics = {}
         for day_name in df['day_name'].unique():
             metrics[day_name] = {}
@@ -87,13 +88,90 @@ class LandingState(State):
                 metrics[day_name][exercise] = {}
                 ex_metrics = temp[(temp['exercise'] == exercise) & (temp['date'] == most_recent)].to_records()
                 for rec in ex_metrics:
-                    metrics[day_name][exercise][rec['metric']] = f'{round(rec["value"], 2)} {rec["unit"]}'\
-                        if rec['unit'] is not None else f'{round(rec["value"], 2)}'
-                    metrics[day_name][exercise][f"{rec['metric']}_diff"] = f"{round(rec['diff'], 2)}"
+                    metrics[day_name][exercise][rec['metric']] = round(rec["value"], 2)
+                    metrics[day_name][exercise][f"{rec['metric']}_prev"] = round(rec['prev'], 2)
                     var = temp[(temp['exercise'] == exercise) & (temp['metric'] == rec['metric'])].copy()
-                    metrics[day_name][exercise][f'{rec["metric"]}_var'] = f"{round(var['value'].var(), 2)} {rec['unit']}"\
-                        if rec['unit'] is not None else f'{round(var["value"].var(), 2)}'
+                    metrics[day_name][exercise][f'{rec["metric"]}_var'] = round(var['value'].var(), 2)
+                    metrics[day_name][exercise][f'{rec["metric"]}_unit'] = rec['unit']
         return metrics
+
+    @rx.var
+    def indicators(self) -> Dict[str, Dict[str, go.Figure]]:
+        data = self.metrics
+        indicators = {}
+        for day_name in data.keys():
+            ex_metrics = data[day_name]
+            indicators[day_name] = {}
+            for exercise in ex_metrics:
+                metrics = ex_metrics[exercise]
+                unit = metrics['TotalLoad_unit']
+                ref = metrics['TotalLoad_prev']
+                value = metrics['TotalLoad']
+                var = metrics['TotalLoad_var']
+                fig = go.Figure()
+                fig.add_trace(
+                    go.Indicator(
+                        mode="number+delta",
+                        value=value,
+                        number={'suffix': f" {unit}"},
+                        delta={'reference': ref, 'relative': True, 'position': "top"},
+                        domain={'row': 0, 'column': 0},
+                        title={'text': "Total Load"}
+                    )
+                )
+                fig.add_trace(
+                    go.Indicator(
+                        mode="number+delta",
+                        value=var,
+                        domain={'row': 1, 'column': 0},
+                        title={'text': "Total Load Variance"}
+                    )
+                )
+                ref = metrics['AvgRPE_prev']
+                value = metrics['AvgRPE']
+                var = metrics['AvgRPE_var']
+                fig.add_trace(
+                    go.Indicator(
+                        mode="number+delta",
+                        value=value,
+                        number={},
+                        delta={'reference': ref, 'relative': True, 'position': "top"},
+                        domain={'row': 0, 'column': 1},
+                        title={'text': "Avg RPE"}
+                    )
+                )
+                fig.add_trace(
+                    go.Indicator(
+                        mode="number+delta",
+                        value=var,
+                        domain={'row': 1, 'column': 1},
+                        title={'text': "Avg RPE Variance"}
+                    )
+                )
+                ref = metrics['AvgRepsPerSet_prev']
+                value = metrics['AvgRepsPerSet']
+                var = metrics['AvgRepsPerSet_var']
+                fig.add_trace(
+                    go.Indicator(
+                        mode="number+delta",
+                        value=value,
+                        number={'suffix': ' reps'},
+                        delta={'reference': ref, 'relative': True, 'position': "top"},
+                        domain={'row': 0, 'column': 2},
+                        title={'text': "Reps Per Set"}
+                    )
+                )
+                fig.add_trace(
+                    go.Indicator(
+                        mode="number+delta",
+                        value=var,
+                        domain={'row': 1, 'column': 2},
+                        title={'text': "Reps Per Set Variance"}
+                    )
+                )
+                indicators[day_name][exercise] = fig
+
+        return indicators
 
 
 
@@ -138,48 +216,14 @@ def build_tab_list(day_name: str):
 
 
 def build_metric_block(day_name: str):
-    data = LandingState.metrics[day_name]
+    figs = LandingState.indicators[day_name]
     return rx.tab_panel(
         rx.foreach(
-            data,
-            lambda x: build_metrics(x)
+            figs,
+            lambda x: rx.plotly(data=x[1], layout=dict(grid={'rows': 2, 'columns': 3, 'pattern': "independent"},
+                                                       paper_bgcolor='#262626'))
         ),
 
         width='100%'
     )
 
-
-def build_metrics(ex_metrics: List):
-    return rx.box(rx.vstack(
-        rx.text(ex_metrics[0]),
-            rx.responsive_grid(
-            rx.stat(
-                rx.stat_label('Total Load'),
-                rx.stat_number(ex_metrics[1]['TotalLoad']),
-                rx.stat_help_text(ex_metrics[1]['TotalLoad_diff'])
-            ),
-            rx.stat(
-                rx.stat_label('Average RPE'),
-                rx.stat_number(ex_metrics[1]['AvgRPE']),
-                rx.stat_help_text(ex_metrics[1]['AvgRPE_diff'])
-            ),
-            rx.stat(
-                rx.stat_label('Reps per Set'),
-                rx.stat_number(ex_metrics[1]['AvgRepsPerSet']),
-                rx.stat_help_text(ex_metrics[1]['AvgRepsPerSet_diff'])
-                ),
-            rx.stat(
-                rx.stat_label('Load Variance'),
-                rx.stat_number(ex_metrics[1]['TotalLoad_var']),
-            ),
-            rx.stat(
-                rx.stat_label('RPE Variance'),
-                rx.stat_number(ex_metrics[1]['AvgRPE_var']),
-            ),
-            rx.stat(
-                rx.stat_label('Rep Variance'),
-                rx.stat_number(ex_metrics[1]['AvgRepsPerSet_var'])
-            ), width='100%', columns=[3], spacing="4"
-        ), rx.container(),
-        align_items='center'
-        ), border_color='black', border_radius='lg', border_width="thin", bg='darkgray')
