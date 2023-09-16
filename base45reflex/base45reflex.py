@@ -18,6 +18,7 @@ if not ENVIRONMENT == "DEV":
     app.add_page(workout.record_workout, route='/record', on_load=State.check_login())
     app.add_page(workout.view_workout, route='/workout/[pid]', on_load=State.check_login())
     app.add_page(workout.update_workout, route='workout/update/[pid]', on_load=State.check_login())
+    app.add_page(program.view_program_list, route='/program/list')
     app.compile()
 
 else:
@@ -29,4 +30,5 @@ else:
     app.add_page(workout.record_workout, route='/record')
     app.add_page(workout.view_workout, route='/workout/[pid]')
     app.add_page(workout.update_workout, route='workout/update/[pid]')
+    app.add_page(program.view_program_list, route='/program/list')
     app.compile()

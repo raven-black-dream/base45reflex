@@ -47,7 +47,7 @@ class PageView:
                                     rx.link(rx.button('View Current Program', bg='#1a472a', color='#ffffff'), href='/', button=True),
                                     rx.link(rx.button('Edit Current Program', bg='#1a472a', color='#ffffff'), href='/', button=True),
                                     rx.link(rx.button("Create New Program", bg='#1a472a', color='#ffffff'), href='/', button=True),
-                                    rx.link(rx.button("View Program List", bg='#1a472a', color='#ffffff'), href='/', button=True)
+                                    rx.link(rx.button("View Program List", bg='#1a472a', color='#ffffff'), href='/program/list', button=True)
                                 )
 
 
