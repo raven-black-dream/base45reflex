@@ -31,4 +31,5 @@ else:
     app.add_page(workout.view_workout, route='/workout/[pid]')
     app.add_page(workout.update_workout, route='workout/update/[pid]')
     app.add_page(exercise.exercise_list, route='/exercises')
+    app.add_page(exercise.create_exercise, route='/exercises/create')
     app.compile()
