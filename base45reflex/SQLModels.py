@@ -152,6 +152,8 @@ class UnitType(rx.Model, table=True):
     id: int = Field(primary_key=True)
     name: str
 
+    sets: List["WorkoutSet"] = Relationship(back_populates='workout_set_unit')
+
 
 class UnitConversion(rx.Model, table=True):
     __tablename__ = 'unit_conversion'
@@ -190,7 +192,8 @@ class WorkoutSet(rx.Model, table=True):
     num_sets: int
     set_order: int
     weight: float
-    unit_id: int
+    unit_id: int = Field(foreign_key='unit_types.id')
+    workout_set_unit: UnitType = Relationship(back_populates='sets')
 
     metrics: List["UserWorkoutMetrics"] = Relationship(back_populates='ex_set')
 

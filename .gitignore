@@ -4,4 +4,7 @@
 .idea
 base45reflex/firebaseConfig.json
 __pycache__/
-/.vscode/
+/.vscode
+/.vscode/launch.json
+/.idea/workspace.xml
+/.idea/base45reflex.iml
