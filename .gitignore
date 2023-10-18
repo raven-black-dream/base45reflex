@@ -1,10 +1,10 @@
 *.db
 *.py[cod]
-.web
 .idea
-base45reflex/firebaseConfig.json
-__pycache__/
+.web
+/.idea/base45reflex.iml
+/.idea/workspace.xml
 /.vscode
 /.vscode/launch.json
-/.idea/workspace.xml
-/.idea/base45reflex.iml
+__pycache__/
+base45reflex/firebaseConfig.json

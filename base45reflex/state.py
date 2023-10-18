@@ -88,7 +88,7 @@ class LoginState(State):
     def get_login_pass(self, password):
         self.password = password
 
-    def authenticate(self):
+    def authenticate(self, form_data: dict):
         try:
             user = auth.sign_in_with_email_and_password(self.email, self.password)
             self.refresh_token = user['refreshToken']

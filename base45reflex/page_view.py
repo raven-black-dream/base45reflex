@@ -4,7 +4,8 @@ from base45reflex.state import DrawerState
 
 class PageView:
     def __init__(self, components: list) -> None:
-        self.drawer_toggle = rx.button(rx.icon(tag='hamburger'), on_click=DrawerState.left, bg='#1a472a', color='#ffffff')
+        self.drawer_toggle = rx.button(rx.icon(tag='hamburger'), on_click=DrawerState.left, bg='#1a472a',
+                                       color='#ffffff')
         self.components = components
 
         self.drawer = self.compose_drawer()
@@ -19,6 +20,7 @@ class PageView:
                 justify_content='right',
 
             ),
+            height='100vh',
             width="100%",
             padding='2rem',
             display='flex',
@@ -43,6 +45,7 @@ class PageView:
                             rx.drawer_body(
                                 rx.vstack(
                                     rx.link(rx.button('Profile', bg='#1a472a', color='#ffffff'), href='/', button=True),
+                                    rx.link(rx.button('Workouts', bg='#1a472a', color='#ffffff'), href='/workouts', button=True),
                                     rx.link(rx.button('Record Workout', bg='#1a472a', color='#ffffff'), href='/record', button=True),
                                     rx.link(rx.button('View Current Program', bg='#1a472a', color='#ffffff'), href='/', button=True),
                                     rx.link(rx.button('Edit Current Program', bg='#1a472a', color='#ffffff'), href='/', button=True),

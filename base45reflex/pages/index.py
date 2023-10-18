@@ -185,28 +185,24 @@ class LandingState(State):
 
 
 def landing() -> rx.Component:
-    comp_list = [rx.heading(f"Welcome {LandingState.first_name}", color='#aaaaaa', font_size="2em"),
-                 # rx.box(calendar()),
-                 rx.divider(),
-                 rx.center(rx.tabs(
-                     rx.tab_list(rx.foreach(
-                         LandingState.day_names,
-                         lambda x: build_tab_list(x)
-                     )),
-                     rx.tab_panels(rx.foreach(
-                         LandingState.day_names,
-                         lambda x: build_metric_block(x)
-                     )),
-                     width='75%', is_lazy=True, variant='solid-rounded',
-                 ),
-                     width='100%'),
-                 rx.divider(),
-                 rx.center(
-
-                 )
-
-                 ]
-    return PageView(comp_list).build()
+    return PageView([
+        rx.heading(f"Welcome {LandingState.first_name}", color='#aaaaaa', font_size="2em"),
+        # rx.box(calendar()),
+        rx.divider(),
+        rx.center(rx.tabs(
+            rx.tab_list(rx.foreach(
+                LandingState.day_names,
+                lambda x: build_tab_list(x)
+            )),
+            rx.tab_panels(rx.foreach(
+                LandingState.day_names,
+                lambda x: build_metric_block(x)
+            )),
+            width='75%', is_lazy=True, variant='solid-rounded', color_scheme='green'
+        ),
+            width='100%'),
+        rx.divider(),
+    ]).build()
 
 
 def build_tab_list(day_name: str):

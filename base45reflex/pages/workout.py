@@ -1,6 +1,7 @@
 import pandas as pd
 import reflex as rx
-from ..SQLModels import Workout, WorkoutSet, WorkoutComment, UserClients, UserProgramHistory, ProgramDay
+from ..SQLModels import Workout, WorkoutSet, WorkoutComment, UserClients, UserProgramHistory, ProgramDay, Exercise
+import sqlmodel as sqlm
 from ..state import State
 from ..page_view import PageView
 from typing import Any, Dict, List, Union
@@ -97,11 +98,83 @@ class WorkoutState(State):
                 'complete': workout.complete
             } for workout in workouts]
 
+    @rx.var
+    def user_program(self) -> Dict[str, Any]:
+        with rx.session() as session:
+            statement = UserProgramHistory.select.where(sqlm.and_(UserProgramHistory.user_id == self.user['id'],
+                                                                  UserProgramHistory.current == 1))
+            current_program = session.exec(statement).first()
+            program = {
+                'start_date': current_program.start_date,
+                'end_date': current_program.end_date,
+                'program': current_program.history_program.dict(),
+                'program_days': {
+                    day.name: [{
+                        'exercise': ex_set.exercise.name,
+                        'exercise_id': ex_set.exercise_id,
+                        'num_sets': ex_set.num_sets,
+                        'min_reps': ex_set.min_reps,
+                        'max_reps': ex_set.max_reps,
+                        'avg_rpe': ex_set.avg_rpe,
+                        'amrap': ex_set.amrap,
+                        'myoreps': ex_set.myoreps,
+                    } for ex_set in day.day_sets]
+                    for day in current_program.history_program.program_days
+                },
+                'predictions': [{
+                    'day_name': pred.program_day.name,
+                    'exercise': pred.exercise.name,
+                    'weight': pred.value,
+                    'unit': pred.unit.name
+                } for pred in current_program.predictions],
+
+            }
+            return program
+
+    @rx.var
+    def day_names(self) -> List[str]:
+        names = list(self.user_program['program_days'].keys())
+        names.sort()
+        return names
+
+    @rx.var
+    def program_days(self) -> Dict[str, List[Dict[str, Any]]]:
+        return self.user_program['program_days']
+
+
+class DayChooserState(WorkoutState):
+    days: List[Dict[str, Any]]
+    selected_day: str
+
+    @rx.var
+    def days(self) -> List[str]:
+        days = ['Custom']
+        days.extend(self.day_names)
+        return days
+
+    def select_day(self, day: str):
+        self.selected_day = day
+
+    def submit(self):
+        return rx.redirect(f"/record/{self.selected_day}")
+
+
+def choose_day():
+    return PageView([
+        rx.heading("Choose Day", font_size="2em", color="#aaaaaa"),
+        rx.select(
+            DayChooserState.days,
+            placeholder="Select a day",
+            on_change=DayChooserState.select_day,
+            color_scheme='green',
+        ),
+        rx.button("Submit", on_click=DayChooserState.submit, color_scheme='green')
+    ]).build()
+
 
 class WorkoutFormState(WorkoutState):
     form_data: dict
-    program_day: str
-    items: List[dict]
+    # items: Dict[str, List[Dict[str, any]]]
     new_item: dict
 
     def submit(self, form_data: dict):
@@ -113,13 +186,91 @@ class WorkoutFormState(WorkoutState):
     def remove_item(self, item):
         self.items = [i for i in self.items if i is not item]
 
+    @rx.var
+    def exercise_list(self):
+        statement = Exercise.select
+        with rx.session() as session:
+            exercises = session.exec(statement).all()
+            return [ex.name for ex in exercises]
+
+    @rx.var
+    def day_name(self):
+        return self.get_query_params().get("day_name", "no day")
+
+    @rx.var
+    def day(self) -> List[Dict[str, any]]:
+        if self.day_name == "no day":
+            return [{}]
+        elif self.day_name == "Custom":
+            return [{}]
+        else:
+            return self.program_days[self.day_name]
+
+    @rx.var
+    def items(self) -> List[Dict[str, any]]:
+        preds = [pred for pred in self.user_program['predictions'] if pred['day_name'] == self.day_name]
+        items = []
+        if self.day == [{}]:
+            return [{}]
+        for item in self.day:
+            exercise_name = item['exercise'] if not item['myoreps'] else f"{item['exercise']}-myoreps"
+            exercise_pred = [exercise for exercise in preds if exercise['exercise'] == item['exercise']][0]
+            for i in range(item['num_sets']):
+                if i + 1 == item['num_sets'] and item['amrap']:
+                    items.append(
+                        {
+                            'exercise_name': exercise_name,
+                            'input_ids': {'reps': f"{item['exercise']}_i_reps",
+                                          'weight': f"{item['exercise']}_i_weight",
+                                          'rpe': f"{item['exercise']}_i_rpe"},
+                            'reps': item['min_reps'],
+                            'weight': exercise_pred['weight'],
+                            'unit': exercise_pred['unit'],
+                            'rpe': 10.0
+                        }
+                    )
+                else:
+                    items.append(
+                        {
+                            'exercise_name': exercise_name,
+                            'input_id_reps': f"{item['exercise']}_i_reps",
+                            'input_id_weight': f"{item['exercise']}_i_weight",
+                            'input_id_rpe': f"{item['exercise']}_i_rpe",
+                            'reps': item['min_reps'],
+                            'weight': exercise_pred['weight'],
+                            'unit': exercise_pred['unit'],
+                            'rpe': item['avg_rpe']
+                        }
+                    )
+
+        return items
+
 
 def record_workout():
     return PageView([
-        rx.heading("Record Workout"),
-        rx.form(rx.vstack(
+        rx.heading("Record Workout", color='#aaaaaa', font_size="2em"),
+        rx.form(
+            rx.vstack(
+                rx.hstack(
+                    rx.text("Exercise"),
+                    rx.text("Reps"),
+                    rx.text("Weight"),
+                    rx.text("RPE"),
+                ),
+                rx.foreach(
+                    WorkoutFormState.items,
+                    lambda item: rx.hstack(
+                        rx.text(item['exercise_name']),
+                        rx.number_input(item['reps'], id=item["input_id_reps"]),
+                        rx.number_input(item['weight'], input_mode='decimal', id=item["input_id_weight"]),
+                        rx.number_input(item['rpe'], input_mode='decimal', id=item["input_id_rpe"]),
 
-        ), on_submit=WorkoutFormState.submit
+                    )
+                )
+            ),
+
+            rx.button("Submit", type_="submit", color_scheme='green'),
+            on_submit=WorkoutFormState.submit,
         )
     ]).build()
 
@@ -128,50 +279,50 @@ def list_workouts():
     return PageView(
         [
             rx.heading("Workouts", font_size="2em", color="#aaaaaa"),
-                rx.foreach(
-                    WorkoutState.all_workout_data,
-                    lambda workout: rx.cond(
-                        workout['complete'],
-                        rx.cond(
-                            workout['deload'],
-                            rx.hstack(
-                                rx.link(
-                                    rx.button(f"{workout['day']} - {workout['date']}", bg_color='#1a472a',
-                                              color='#aaaaaa'),
-                                    href=f"/workout/{workout['id']}", button=True,),
-                                rx.badge("Complete", color='green'),
-                                rx.badge("Deload", color="purple"),
-                                bg_color='#262626', color='#aaaaaa'
-                                ),
-                            rx.hstack(
-                                rx.link(
-                                    rx.button(f"{workout['day']} - {workout['date']}", bg_color='#1a472a',
-                                              color='#aaaaaa'),
-                                    href=f"/workout/{workout['id']}", button=True, ),
-                                rx.badge("Complete", color='green'),
-                                bg_color='#262626', color='#aaaaaa'
-                            )
+            rx.foreach(
+                WorkoutState.all_workout_data,
+                lambda workout: rx.cond(
+                    workout['complete'],
+                    rx.cond(
+                        workout['deload'],
+                        rx.hstack(
+                            rx.link(
+                                rx.button(f"{workout['day']} - {workout['date']}", bg_color='#1a472a',
+                                          color='#aaaaaa'),
+                                href=f"/workout/{workout['id']}", button=True, ),
+                            rx.badge("Complete", color='green'),
+                            rx.badge("Deload", color="purple"),
+                            bg_color='#262626', color='#aaaaaa'
                         ),
-                        rx.cond(
-                            workout['deload'],
-                            rx.hstack(
-                                rx.link(
-                                    rx.button(f"{workout['day']} - {workout['date']}", bg_color='#1a472a',
-                                              color='#aaaaaa'),
-                                    href=f"/workout/{workout['id']}", button=True, ),
-                                rx.badge("Deload", color="purple"),
-                                bg_color='#262626', color='#aaaaaa', button=True
-                            ),
-                            rx.hstack(
-                                rx.link(
-                                    rx.button(f"{workout['day']} - {workout['date']}", bg_color='#1a472a',
-                                              color='#aaaaaa'),
-                                    href=f"/workout/{workout['id']}", button=True, ),
-                                bg_color='#262626', color='#aaaaaa'
-                            )
+                        rx.hstack(
+                            rx.link(
+                                rx.button(f"{workout['day']} - {workout['date']}", bg_color='#1a472a',
+                                          color='#aaaaaa'),
+                                href=f"/workout/{workout['id']}", button=True, ),
+                            rx.badge("Complete", color='green'),
+                            bg_color='#262626', color='#aaaaaa'
+                        )
+                    ),
+                    rx.cond(
+                        workout['deload'],
+                        rx.hstack(
+                            rx.link(
+                                rx.button(f"{workout['day']} - {workout['date']}", bg_color='#1a472a',
+                                          color='#aaaaaa'),
+                                href=f"/workout/{workout['id']}", button=True, ),
+                            rx.badge("Deload", color="purple"),
+                            bg_color='#262626', color='#aaaaaa', button=True
+                        ),
+                        rx.hstack(
+                            rx.link(
+                                rx.button(f"{workout['day']} - {workout['date']}", bg_color='#1a472a',
+                                          color='#aaaaaa'),
+                                href=f"/workout/{workout['id']}", button=True, ),
+                            bg_color='#262626', color='#aaaaaa'
                         )
                     )
-                ),
+                )
+            ),
 
         ]
     ).build()

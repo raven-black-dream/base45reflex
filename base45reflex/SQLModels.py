@@ -21,6 +21,8 @@ class Exercise(rx.Model, table=True):
     type: int = Field(foreign_key='exercise_type.id')
 
     sets: List["WorkoutSet"] = Relationship(back_populates='exercise')
+    exercise_preds: List["UserProgramHistoryPrediction"] = Relationship(back_populates='exercise')
+    program_sets: List["ProgramSet"] = Relationship(back_populates='exercise')
 
 class InputFeatures(rx.Model, table=True):
     __tablename__ = "input_features"
@@ -67,6 +69,7 @@ class ProgramDay(rx.Model, table=True):
     name: str
 
     day_sets: List["ProgramSet"] = Relationship(back_populates='program_day')
+    day_preds: List['UserProgramHistoryPrediction'] = Relationship(back_populates='program_day')
     workouts: List['Workout'] = Relationship(back_populates='day')
 
 
@@ -78,6 +81,7 @@ class ProgramSet(rx.Model, table=True):
     program_day: ProgramDay = Relationship(back_populates='day_sets')
     exercise_order: int
     exercise_id: int = Field(foreign_key='exercises.id')
+    exercise: Exercise = Relationship(back_populates='program_sets')
     min_reps: int
     max_reps: int
     avg_rpe: float
@@ -131,8 +135,11 @@ class UserProgramHistoryPrediction(rx.Model, table=True):
     user_program_history_id: int = Field(foreign_key='user_program_history.id')
     program: UserProgramHistory = Relationship(back_populates="predictions")
     program_day_id: int = Field(foreign_key='program_days.id')
-    exercise_id: int
-    unit_id: int
+    program_day: ProgramDay = Relationship(back_populates='day_preds')
+    exercise_id: int = Field(foreign_key='exercises.id')
+    exercise: Exercise = Relationship(back_populates='exercise_preds')
+    unit_id: int = Field(foreign_key='unit_types.id')
+    unit: "UnitType" = Relationship(back_populates='preds')
     value: float
 
 
@@ -153,6 +160,7 @@ class UnitType(rx.Model, table=True):
     name: str
 
     sets: List["WorkoutSet"] = Relationship(back_populates='workout_set_unit')
+    preds: List["UserProgramHistoryPrediction"] = Relationship(back_populates='unit')
 
 
 class UnitConversion(rx.Model, table=True):
