@@ -13,6 +13,7 @@ services:
       DOMAIN: ${DOMAIN:-localhost}
     ports:
       - 443:443
+      - 80:80  # for acme-challenge via HTTP
     build:
       context: .
       dockerfile: Caddy.Dockerfile

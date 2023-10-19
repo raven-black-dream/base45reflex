@@ -6,12 +6,12 @@ authors = ["Evan Harley <evan.harley21@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
-reflex = "^0.2.7"
+python = ">=3.11, <3.13"
+reflex = "^0.2.8"
 pandas = "^2.1.0"
 plotly = "^5.16.1"
 pyrebase4 = "^4.7.1"
-numpy = "^1.25.2"
+numpy = "^1.26.1"
 
 
 [build-system]

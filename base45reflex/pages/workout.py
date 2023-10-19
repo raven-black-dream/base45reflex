@@ -4,7 +4,8 @@ from ..SQLModels import Workout, WorkoutSet, WorkoutComment, UserClients, UserPr
 import sqlmodel as sqlm
 from ..state import State
 from ..page_view import PageView
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, TypedDict
+from numbers import Number
 
 
 class WorkoutState(State):
@@ -187,14 +188,14 @@ class WorkoutFormState(WorkoutState):
         self.items = [i for i in self.items if i is not item]
 
     @rx.var
-    def exercise_list(self):
+    def exercise_list(self) -> List[str]:
         statement = Exercise.select
         with rx.session() as session:
             exercises = session.exec(statement).all()
             return [ex.name for ex in exercises]
 
     @rx.var
-    def day_name(self):
+    def day_name(self) -> str:
         return self.get_query_params().get("day_name", "no day")
 
     @rx.var
@@ -207,27 +208,36 @@ class WorkoutFormState(WorkoutState):
             return self.program_days[self.day_name]
 
     @rx.var
-    def items(self) -> List[Dict[str, any]]:
+    def items(self) -> List[Dict[str, str]]:
         preds = [pred for pred in self.user_program['predictions'] if pred['day_name'] == self.day_name]
         items = []
         if self.day == [{}]:
-            return [{}]
+            return [{
+                'exercise_name': '',
+                'input_id_reps': '',
+                'input_id_weight': '',
+                'input_id_rpe': '',
+                'reps': "0",
+                'weight': "0",
+                'unit': '',
+                'rpe': "0.0"
+            }]
         for item in self.day:
             exercise_name = item['exercise'] if not item['myoreps'] else f"{item['exercise']}-myoreps"
             exercise_pred = [exercise for exercise in preds if exercise['exercise'] == item['exercise']][0]
             for i in range(item['num_sets']):
                 if i + 1 == item['num_sets'] and item['amrap']:
-                    items.append(
-                        {
-                            'exercise_name': exercise_name,
-                            'input_ids': {'reps': f"{item['exercise']}_i_reps",
-                                          'weight': f"{item['exercise']}_i_weight",
-                                          'rpe': f"{item['exercise']}_i_rpe"},
-                            'reps': item['min_reps'],
-                            'weight': exercise_pred['weight'],
-                            'unit': exercise_pred['unit'],
-                            'rpe': 10.0
-                        }
+                    items.append({
+                        'exercise_name': exercise_name,
+                        'input_id_reps': f"{item['exercise']}_i_reps",
+                        'input_id_weight': f"{item['exercise']}_i_weight",
+                        'input_id_rpe': f"{item['exercise']}_i_rpe",
+                        'reps': str(item['min_reps']),
+                        'weight': str(exercise_pred['weight']),
+                        'unit': exercise_pred['unit'],
+                        'rpe': "10.0"
+                    }
+
                     )
                 else:
                     items.append(
@@ -236,10 +246,10 @@ class WorkoutFormState(WorkoutState):
                             'input_id_reps': f"{item['exercise']}_i_reps",
                             'input_id_weight': f"{item['exercise']}_i_weight",
                             'input_id_rpe': f"{item['exercise']}_i_rpe",
-                            'reps': item['min_reps'],
-                            'weight': exercise_pred['weight'],
+                            'reps': str(item['min_reps']),
+                            'weight': str(exercise_pred['weight']),
                             'unit': exercise_pred['unit'],
-                            'rpe': item['avg_rpe']
+                            'rpe': str(item['avg_rpe'])
                         }
                     )
 
@@ -249,21 +259,31 @@ class WorkoutFormState(WorkoutState):
 def record_workout():
     return PageView([
         rx.heading("Record Workout", color='#aaaaaa', font_size="2em"),
-        rx.form(
+        rx.center(rx.form(
             rx.vstack(
                 rx.hstack(
-                    rx.text("Exercise"),
-                    rx.text("Reps"),
-                    rx.text("Weight"),
-                    rx.text("RPE"),
+                    rx.box(rx.text("Exercise"), width='20%', bg_color='#1a472a', color='#ffffff',
+                           border_radius="md"),
+                    rx.box(rx.text("Reps"), width='20%', bg_color='#1a472a', color='#ffffff',
+                           border_radius="md"),
+                    rx.box(rx.text("Weight"), width='20%', bg_color='#1a472a', color='#ffffff',
+                           border_radius="md"),
+                    rx.box(rx.text("RPE"), width='20%', bg_color='#1a472a', color='#ffffff',
+                           border_radius="md"),
+                    width='100%'
                 ),
                 rx.foreach(
                     WorkoutFormState.items,
                     lambda item: rx.hstack(
-                        rx.text(item['exercise_name']),
-                        rx.number_input(item['reps'], id=item["input_id_reps"]),
-                        rx.number_input(item['weight'], input_mode='decimal', id=item["input_id_weight"]),
-                        rx.number_input(item['rpe'], input_mode='decimal', id=item["input_id_rpe"]),
+                        rx.box(rx.text(item['exercise_name']), width='20%', bg_color='#1a472a',
+                               color='#ffffff', border_radius="md"),
+                        rx.input(value=item['reps'], id=item["input_id_reps"], size='sm', width='20%'),
+                        rx.input(value=item['weight'], input_mode='decimal',
+                                 id=item["input_id_weight"], size='sm', width='20%'),
+                        rx.input(value=item['rpe'], input_mode='decimal',
+                                 id=item["input_id_rpe"], size='sm', width='20%'),
+                        width='100%'
+
 
                     )
                 )
@@ -271,7 +291,7 @@ def record_workout():
 
             rx.button("Submit", type_="submit", color_scheme='green'),
             on_submit=WorkoutFormState.submit,
-        )
+        ))
     ]).build()
 
 
